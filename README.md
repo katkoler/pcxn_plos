@@ -1,2 +1,2 @@
-# pcxn_plos
-PCxN Version Submitted to PLOS Computational Biologu
+# PCxN
+Version submitted to PLOS Computational Biology
