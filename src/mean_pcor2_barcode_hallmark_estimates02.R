@@ -24,7 +24,19 @@ library(metap)
 
 # directory with gene expression background
 # availalble in Google Drive)
-barcode_dir = "/net/irizarryfs01/srv/export/irizarryfs01/share_root/ypitajuarez/Barcode/HGU133Plus2/"
+barcode_dir <- "/shared/hidelab2/shared/Sokratis/PCxN_Plos/data/HGU133plus2/"
+
+# ==== Arguments ====
+# read command line arguments
+# cmd_args <- as.numeric(commandArgs(trailingOnly = T))
+cmd_args <- commandArgs(trailingOnly = T)
+
+# ==== INPUTS ====
+geneset_file <- cmd_args[2]
+output_folder <- cmd_args[4]
+id <- cmd_args[1]
+
+# cmd_args <- as.numeric(cmd_args[c(1,3)])
 
 # ==== Functions ====
 # adjust p-values and correlation estimates,
@@ -41,7 +53,7 @@ AdjustPmat = function(p_mat,eps=1E-16){
 
 # ==== Barcode Annotation ====
 # Sample annotation for the gene expression background
-tissue_annot <- readRDS( "/pcxn/data/Barcode3.tissue.RDS" )
+tissue_annot <- readRDS( "../data/Barcode3.tissue.RDS" )
 
 # ==== GSE Series ====
 # GSE series per tissue
@@ -69,14 +81,12 @@ for(tissue_select in names(res)){
 }
 
 
-# ==== Arguments ====
-# read command line arguments
-cmd_args <- as.numeric(commandArgs(trailingOnly = T))
+
 
 
 # ==== Pathway Annotation ====
 # Filtered gene set annotation
-gs_lst = readRDS( "pcxn/data/h_v51.RDS" ) 
+gs_lst = readRDS(paste("../data/",geneset_file, sep=""))
 
 
 # indices for pathway pairs 
@@ -86,9 +96,9 @@ pairs_chunks <- split(1:number_of_pathways, ceiling(1:number_of_pathways/1000))
 
 # ==== Pathway Names =====
 # load a set of experiment-level estimates
-my_rds = paste0("/pcxn/output/mean_pcor2_barcode/",fname[13],"_cpad_pathcor.RDS")
+my_rds = paste0("../",output_folder,"/mean_pcor2_barcode/",fname[13],"_cpad_pathcor.RDS")
 
-myLst = readRDS(my_rds)[ pairs_chunks[[ cmd_args[1] ]] ]
+myLst = readRDS(my_rds)[ pairs_chunks[[ as.numeric(cmd_args[1]) ]] ]
 # get names for pathway pairs
 res = as.data.frame( t(sapply(myLst,function(x){ c(x[["Pathway.A"]],x[["Pathway.B"]]) })) )
 colnames(res) = c("Pathway.A","Pathway.B")
@@ -100,8 +110,8 @@ res$Overlap.Coefficient = unlist( sapply(myLst,function(x){x[[ "Overlap.Coeff" ]
 # ===== Correlation Estimates ====
 GetCorEstimate = function(ic){
     # load experiment-level estimates
-    my_rds = paste0("/pcxn/output/mean_pcor2_barcode/",fname[ic],"_cpad_pathcor.RDS")
-    myLst = readRDS(my_rds)[ pairs_chunks[[ cmd_args[1] ]] ]
+    my_rds = paste0("../",output_folder,"/mean_pcor2_barcode/",fname[ic],"_cpad_pathcor.RDS")
+    myLst = readRDS(my_rds)[ pairs_chunks[[ as.numeric(cmd_args[1]) ]] ]
     # extract correlation estimates
     tmp = unlist( sapply(myLst, function(x){x[[ "estimate" ]]}), use.names = F )
     setTxtProgressBar(pb,ic)
@@ -110,7 +120,7 @@ GetCorEstimate = function(ic){
 
 pb = txtProgressBar(min=0,max=length(fname),style=3,initial=0,char="-")
 cat("\n")
-cor_estimates = mclapply( seq_along(fname), GetCorEstimate, mc.cores = cmd_args[2] ) 
+cor_estimates = mclapply( seq_along(fname), GetCorEstimate, mc.cores = as.numeric(cmd_args[3]) ) 
 close(pb)
 
 
@@ -118,7 +128,7 @@ cor_estimates = Reduce(f = cbind, x = cor_estimates)
 colnames(cor_estimates) = fname
 
 # number of samples per experiment
-n_vec = readRDS( paste0( "/pcxn/output/mean_pcor2_barcode/res/n_vec.RDS" ) )
+n_vec = readRDS( paste0( "../",output_folder,"/mean_pcor2_barcode/res/n_vec.RDS" ) )
 
 # weighted average for the correlation estimates
 n_mult = n_vec/sum(n_vec)
@@ -127,8 +137,8 @@ res$PathCor = c( cor_estimates%*%n_mult )
 # ==== P-Values ====
 GetPvals = function(ic){
     # load experiment-level estimates
-    my_rds = paste0(pcxn_dir,"output/hallmark/mean_pcor2_barcode/",fname[ic],"_cpad_pathcor.RDS")
-    myLst = readRDS(my_rds)[ pairs_chunks[[ cmd_args[1] ]] ]
+    my_rds = paste0("../",output_folder,"/mean_pcor2_barcode/",fname[ic],"_cpad_pathcor.RDS")
+    myLst = readRDS(my_rds)[ pairs_chunks[[ as.numeric(cmd_args[1]) ]] ]
     # extract p-value
     tmp = unlist( sapply(myLst, function(x){x[[ "p.value" ]]}), use.names = F )
     setTxtProgressBar(pb,ic)
@@ -138,7 +148,7 @@ GetPvals = function(ic){
 
 pb = txtProgressBar(min=0,max=length(fname),style=3,initial=0,char="-")
 cat("\n")
-pvals = mclapply( seq_along(fname), GetPvals, mc.cores = cmd_args[2] ) 
+pvals = mclapply( seq_along(fname), GetPvals, mc.cores = as.numeric(cmd_args[3]) ) 
 close(pb)
 
 pvals = Reduce(f = cbind, x = pvals)
@@ -162,13 +172,13 @@ CombinePval = function(ic){
 
 pb = txtProgressBar(min=0,max=length(fname),style=3,initial=0,char="-")
 cat("\n")
-combined_pvals = mclapply( 1:nrow(pvals), CombinePval, mc.cores = cmd_args[2] ) 
+combined_pvals = mclapply( 1:nrow(pvals), CombinePval, mc.cores = as.numeric(cmd_args[3]) ) 
 close(pb)
 
 res$p.value = unlist( combined_pvals )
 
 # save results in data frame
-saveRDS(res, paste0("/pcxn/output/mean_pcor2_barcode/res/pcxn_mean_pcor2_barcode_part",cmd_args[1],".RDS"))
+saveRDS(res, paste0("../",output_folder,"/mean_pcor2_barcode/res/pcxn_mean_pcor2_barcode_part",as.numeric(cmd_args[1]),".RDS"))
 
 rm(list = ls())
 gc()

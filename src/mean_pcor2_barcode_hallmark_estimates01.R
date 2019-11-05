@@ -27,7 +27,17 @@ library(parallel)
 
 # directory with gene expression background
 # availalble in Google Drive)
-barcode_dir <- "/net/irizarryfs01/srv/export/irizarryfs01/share_root/ypitajuarez/Barcode/HGU133Plus2/"
+barcode_dir <- "/shared/hidelab2/shared/Sokratis/PCxN_Plos/data/HGU133plus2/"
+
+# ==== Arguments ====
+# command line arguments from submission (slurm) script
+# 1 - job index, pick tissue type
+# 2 - number of cores
+# cmd_args <- as.numeric(commandArgs(trailingOnly = T))
+cmd_args <- commandArgs(trailingOnly = T)
+geneset_file <- cmd_args[4]
+output_folder <- cmd_args[6]
+cmd_args <- as.numeric(cmd_args[1:2])
 
 # ==== PCxN Functions ====
 OverlapCoefficient <- function(x,y){
@@ -158,20 +168,16 @@ ShrinkPCor <- function(x,y,z,method="pearson"){
   return(res)
 }
 
-# ==== Arguments ====
-# command line arguments from submission (slurm) script
-# 1 - job index, pick tissue type
-# 2 - number of cores
-cmd_args <- as.numeric(commandArgs(trailingOnly = T))
+
 
 # ==== Pathway Annotation ====
 # Filtered gene set annotation
-gs_lst = readRDS( "pcxn/data/h_v51.RDS" ) 
+gs_lst = readRDS(paste("../data/",geneset_file, sep="")) 
 
 
 # ==== Barcode Annotation ====
 # Sample annotation for the gene expression background
-tissue_annot <- readRDS( "/pcxn/data/Barcode3.tissue.RDS" )
+tissue_annot <- readRDS( "../data/Barcode3.tissue.RDS" )
 
 # ==== GSE Series ====
 # GSE series per tissue
@@ -289,7 +295,7 @@ for(j in seq_along(tissue_series)){
     close(pb)
     # save experiment-level estimates
     fname = paste0(make.names(tissue_select),"_",series)
-    saveRDS(res, paste0("/pcxn/output/mean_pcor2_barcode/",fname,"_cpad_pathcor.RDS"))
+    saveRDS(res, paste0("../", output_folder, "/mean_pcor2_barcode/",fname,"_cpad_pathcor.RDS"))
 }
 
 rm(list = ls(all=TRUE)) 

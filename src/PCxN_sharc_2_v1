@@ -1,0 +1,41 @@
+#!/bin/bash
+#$ -l rmem=4G -l mem=4G
+#$ -pe openmp 8
+#$ -j y
+#$ -l h_rt=1:00:00
+#$ -t 1-20
+#$ -m bea
+#$ -M kkoler1@sheffield.ac.uk
+#$ -P rse
+
+module load apps/R/3.5.1/gcc-4.8.5
+#module load mpi/openmi/2.1.1/gcc-6.2
+
+#Number of cores
+cores=8
+
+# Inputs
+
+# Select genesets file
+gs="MSigDB.static.10.RDS"
+
+# Select desired relationships based on the table (github)
+# Example: rels="1,2,4,6"
+rels="11"
+
+# Select whether you want partial-correlation(0) or not(1)
+pcor="0"
+
+# Output folder
+ofo="output_MSigDB.static.10_rel11"
+
+# Run code (no need to change that) 
+
+Rscript mean_pcor2_barcode_hallmark_estimates02.R $SGE_TASK_ID $gs $cores $ofo
+echo estimates02 done !!!
+
+# Aggregating the 2 matrices
+Rscript mean_pcor2_barcode_hallmark_estimates03.R $gs $ofo
+echo estimates03 done !!!
+
+echo PCxN Complete !!!
